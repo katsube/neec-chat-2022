@@ -11,7 +11,7 @@ Node.jsをインストールすることで`node`, `npm`の2つのコマンド�
 ### コードの準備
 GitHubからクローン（もしくはZipファイルをダウンロード）し、必要なモジュールをインストールします。
 ```shellsession
-$ https://github.com/katsube/neec-chat-2022.git
+$ git clone https://github.com/katsube/neec-chat-2022.git
 ```
 
 先ほど準備したフォルダに入り、`npm install`で必要なモジュールをインターネット経由で取得します。必要なモジュールはファイル`pachakge.json`内の`dependencies`の部分に定義されています。
