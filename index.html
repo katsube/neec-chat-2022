@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>チャット</title>
+</head>
+<body>
+  <h1>チャット</h1>
+
+  <form id="chat">
+    <input type="text" id="message">
+    <button>送信</button>
+  </form>
+
+  <ul id="message-list">
+    <li>メッセージがここに表示されます</li>
+  </ul>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    document.querySelector("#chat").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const message = document.querySelector("#message").value;
+      socket.emit("post", message);
+    });
+
+    socket.on("member-post", (data) => {
+      const li = document.createElement("li");
+      li.textContent = data;
+      document.querySelector("#message-list").appendChild(li);
+    });
+  </script>
+</body>
+</html>
