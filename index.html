@@ -27,11 +27,10 @@
   <!-- STEP3. チャット画面 -->
   <section id="chatwindow">
     <form id="chat">
-      <input type="text" id="message">
+      <span id="chat-name"></span>：<input type="text" id="message">
       <button>送信</button>
     </form>
     <ul id="message-list">
-      <li>メッセージがここに表示されます</li>
     </ul>
   </section>
 
@@ -61,8 +60,12 @@
     //-------------------------------------------
     document.querySelector("#inputname").addEventListener("submit", (e) => {
       e.preventDefault();
-      IAM.name = document.querySelector("#name").value;
-      console.log("名前を入力しました", IAM.name);
+      const name = document.querySelector("#name").value;
+      IAM.name = name;
+      console.log("名前を入力しました", name);
+
+      // チャット画面に名前を挿入
+      document.querySelector("#chat-name").textContent = name;
 
       // 画面を切り替え
       document.querySelector("#inputname").style.display = "none";        // 「名前入力」を非表示
@@ -75,16 +78,19 @@
     // 自分が発言する
     document.querySelector("#chat").addEventListener("submit", (e) => {
       e.preventDefault();
-      const message = document.querySelector("#message").value;
-      const value   = {
+      const message = document.querySelector("#message");
+      const data = {
         token: IAM.token,
         name: IAM.name,
-        message: message
+        message: message.value
       };
 
       // サーバに発言を送信
-      socket.emit("post", value);
-      console.log("発言を送信しました", value);
+      socket.emit("post", data);
+      console.log("発言を送信しました", data);
+
+      // テキストボックスをクリア
+      message.value = "";
     });
 
     // サーバから発言を受信

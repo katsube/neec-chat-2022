@@ -15,7 +15,7 @@ app.get('/', (req, res) => {
 // Socket.IO
 //-----------------------------------------------
 io.on('connection', (socket) => {
-  console.log('新しいユーザーが接続しました');
+  console.log(`新しいユーザー(${socket.id})が接続しました`);
 
   // 接続時にトークンを作成しクライアントに送信
   const token = createToken();
@@ -23,8 +23,8 @@ io.on('connection', (socket) => {
 
   // 発言を受信したら全クライアントに送信
   socket.on('post', (data) => {
+    io.emit('member-post', data); // 全クライアントに送信
     console.log(data);
-    io.emit('member-post', data);
   });
 });
 
