@@ -3,33 +3,98 @@
 <head>
     <meta charset="utf-8">
     <title>チャット</title>
+    <style>
+      #inputname{display:none;}
+      #chatwindow{display:none;}
+    </style>
 </head>
 <body>
   <h1>チャット</h1>
 
-  <form id="chat">
-    <input type="text" id="message">
-    <button>送信</button>
-  </form>
+  <!-- STEP1. サーバに接続＆トークン取得 -->
+  <section id="nowconnecting">
+    ...サーバに接続中
+  </section>
 
-  <ul id="message-list">
-    <li>メッセージがここに表示されます</li>
-  </ul>
+  <!-- STEP2. 名前入力 -->
+  <section id="inputname">
+    <form>
+      名前：<input type="text" id="name" placeholder="名前を入力">
+      <input type="submit" value="決定">
+    </form>
+  </section>
+
+  <!-- STEP3. チャット画面 -->
+  <section id="chatwindow">
+    <form id="chat">
+      <input type="text" id="message">
+      <button>送信</button>
+    </form>
+    <ul id="message-list">
+      <li>メッセージがここに表示されます</li>
+    </ul>
+  </section>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const socket = io();
+    // 自分自身の情報を保持する変数
+    const IAM = {
+      name: null,
+      token: null
+    }
 
+    //-------------------------------------------
+    // STEP1. サーバに接続＆トークン取得
+    //-------------------------------------------
+    const socket = io();
+    socket.on("token", (token) => {
+      IAM.token = token;
+      console.log("トークンを取得しました", token);
+
+      // 画面を切り替え
+      document.querySelector("#nowconnecting").style.display = "none";    // 「接続中」を非表示
+      document.querySelector("#inputname").style.display = "block";       // 「名前入力」を表示
+    });
+
+    //-------------------------------------------
+    // STEP2. 名前入力
+    //-------------------------------------------
+    document.querySelector("#inputname").addEventListener("submit", (e) => {
+      e.preventDefault();
+      IAM.name = document.querySelector("#name").value;
+      console.log("名前を入力しました", IAM.name);
+
+      // 画面を切り替え
+      document.querySelector("#inputname").style.display = "none";        // 「名前入力」を非表示
+      document.querySelector("#chatwindow").style.display = "block";     // 「チャット画面」を表示
+    });
+
+    //-------------------------------------------
+    // STEP3. チャット画面
+    //-------------------------------------------
+    // 自分が発言する
     document.querySelector("#chat").addEventListener("submit", (e) => {
       e.preventDefault();
       const message = document.querySelector("#message").value;
-      socket.emit("post", message);
+      const value   = {
+        token: IAM.token,
+        name: IAM.name,
+        message: message
+      };
+
+      // サーバに発言を送信
+      socket.emit("post", value);
+      console.log("発言を送信しました", value);
     });
 
+    // サーバから発言を受信
     socket.on("member-post", (data) => {
       const li = document.createElement("li");
-      li.textContent = data;
+      const color = (data.token === IAM.token)? "blue" : "black";
+      const html =  `<span style="color:${color}">${data.name} : ${data.message}</span>`;
+      li.innerHTML = html;
       document.querySelector("#message-list").appendChild(li);
+      console.log("発言を受信しました", data);
     });
   </script>
 </body>
