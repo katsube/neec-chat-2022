@@ -3,32 +3,90 @@
 <head>
     <meta charset="utf-8">
     <title>チャット</title>
+    <style>
+      #inputname{
+        display: none;
+      }
+      #chatwindow{
+        display: none;
+      }
+    </style>
 </head>
 <body>
   <h1>チャット</h1>
 
-  <form id="chat">
-    <input type="text" id="message">
-    <button>送信</button>
-  </form>
+  <section id="nowconnecting">
+    ...サーバに接続中
+  </section>
 
-  <ul id="message-list">
-    <li>メッセージがここに表示されます</li>
-  </ul>
+  <section id="inputname">
+    <form id="inputname-form">
+      <p>名前を入力してください</p>
+      <input type="text" id="name">
+      <button>入室する</button>
+    </form>
+  </section>
+
+  <section id="chatwindow">
+    <form id="chat">
+      <span id="myname"></span> さん
+      <input type="text" id="message">
+      <button>送信</button>
+    </form>
+
+    <ul id="message-list">
+      <li>メッセージがここに表示されます</li>
+    </ul>
+  </section>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
+    const IAM = {
+      token: null,
+      name: null
+    }
+
     const socket = io();
+    socket.on("token", (token)=>{
+      IAM.token = token;
+      console.log("トークンを取得しました", token);
+
+      // トークンを取得したら、名前入力画面を表示する
+      document.querySelector("#nowconnecting").style.display = "none";
+      document.querySelector("#inputname").style.display = "block";
+    });
+
+    document.querySelector("#inputname-form").addEventListener("submit", (e)=>{
+      e.preventDefault();
+      const name = document.querySelector("#name").value;
+      IAM.name = name;
+
+      // 自分自身の名前を表示する
+      document.querySelector("#myname").textContent = name;
+
+      // 名前を入力したら、チャット画面を表示する
+      document.querySelector("#inputname").style.display = "none";
+      document.querySelector("#chatwindow").style.display = "block";
+    });
 
     document.querySelector("#chat").addEventListener("submit", (e) => {
       e.preventDefault();
       const message = document.querySelector("#message").value;
-      socket.emit("post", message);
+      const data = {
+        name: IAM.name,
+        message: message,
+        token: IAM.token
+      };
+      socket.emit("post", data);
     });
 
     socket.on("member-post", (data) => {
       const li = document.createElement("li");
-      li.textContent = data;
+      let color = "black";
+      if(data.token === IAM.token){
+        color = "red";
+      }
+      li.innerHTML = `<span style="color:${color}">${data.name}: ${data.message}</span>`
       document.querySelector("#message-list").appendChild(li);
     });
   </script>
