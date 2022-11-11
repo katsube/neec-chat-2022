@@ -5,6 +5,12 @@ const http = require('http').Server(app);
 const io = require('socket.io')(http);
 
 //-----------------------------------------------
+// グローバル変数
+//-----------------------------------------------
+const CHATLOG = [ ];     // チャットログ
+const MAX_CHATLOG = 10;  // チャットログの最大数
+
+//-----------------------------------------------
 // ルーティング（express）
 //-----------------------------------------------
 app.get("/", (req, res) => {
@@ -18,11 +24,13 @@ io.on('connection', (socket) => {
   console.log('新しいユーザーが接続しました');
 
   const token = createToken();
-  io.to(socket.id).emit('token', token);
+  io.to(socket.id).emit('token', token);      // トークン送信
+  io.to(socket.id).emit('chatlog', CHATLOG);  // ログ送信
 
   socket.on("post", (data) => {
     console.log(data);
     io.emit("member-post", data);
+    addChatLog(data);
   });
 });
 
@@ -36,4 +44,18 @@ function createToken(){
   const uuid = crypto.randomUUID();       // 例： 1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed
   const token = uuid.replaceAll('-','');  // 例： 1b9d6bcdbbfd4b2d9b5dab8dfbbd4bed
   return(token);
+}
+
+/**
+ * チャットログに追加する
+ *
+ */
+function addChatLog(data){
+  // 追加
+  CHATLOG.push(data);
+
+  // 最大数を超えたら古いものから削除
+  if(CHATLOG.length > MAX_CHATLOG){
+    CHATLOG.shift();
+  }
 }

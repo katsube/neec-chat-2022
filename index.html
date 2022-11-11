@@ -56,6 +56,13 @@
       document.querySelector("#inputname").style.display = "block";
     });
 
+    socket.on("chatlog", (log)=>{
+      console.log(log);
+      for(let i=0; i<log.length; i++){
+        addChatLog(log[i]);
+      }
+    });
+
     document.querySelector("#inputname-form").addEventListener("submit", (e)=>{
       e.preventDefault();
       const name = document.querySelector("#name").value;
@@ -81,6 +88,10 @@
     });
 
     socket.on("member-post", (data) => {
+      addChatLog(data);
+    });
+
+    function addChatLog(data){
       const li = document.createElement("li");
       let color = "black";
       if(data.token === IAM.token){
@@ -88,7 +99,7 @@
       }
       li.innerHTML = `<span style="color:${color}">${data.name}: ${data.message}</span>`
       document.querySelector("#message-list").appendChild(li);
-    });
+    }
   </script>
 </body>
 </html>
