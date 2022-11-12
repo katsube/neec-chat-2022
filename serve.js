@@ -95,6 +95,14 @@ function convertEmoji(str){
           .replaceAll(':cat:', '😺');
 }
 
+// 絵文字変換 別パターンの実装例
+function convertEmoji2(str){
+  const EMOJI = {smile: '😁', susi: '🍣', cat: '😺'};
+  return str.replace(/:([a-zA-Z0-9]{1,}):/g, (match, p1) => {
+    return EMOJI[p1];
+  });
+}
+
 /**
  * 時間変換
  */
