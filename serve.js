@@ -34,8 +34,9 @@ io.on('connection', (socket) => {
   socket.on("post", (data) => {
     console.log(data);
 
-    // ::str::を絵文字に変換
-    const message = data.message.replaceAll(':smile:', '😁');
+    // 特定のキーワードを変換
+    let message = convertEmoji(data.message);   // ::str::を絵文字に変換
+    message = convertTime(message);             // $dateを日付に変換
     data.message = message;
 
     io.emit("member-post", data);
@@ -47,15 +48,16 @@ io.on('connection', (socket) => {
 // botの自動発言
 //--------------------
 setInterval(() => {
-  // 30%の確率で発動
-  if( (Math.random() % 3) === 0  ){
+  console.log('setInterval()');
+
+  // 50%の確率で発動
+  if( (Math.random() % 2) === 0  ){
     return;
   }
   const serif = bot.getRandomMessage();
   io.emit("member-post", serif);
   addChatLog(serif);
 }, 1000 * 10);    // 10秒に1回
-
 
 http.listen(3000);
 
@@ -81,4 +83,24 @@ function addChatLog(data){
   if(CHATLOG.length > MAX_CHATLOG){
     CHATLOG.shift();
   }
+}
+
+/**
+ * 絵文字変換
+ */
+function convertEmoji(str){
+  return str
+          .replaceAll(':smile:', '😁')
+          .replaceAll(':susi:', '🍣')
+          .replaceAll(':cat:', '😺');
+}
+
+/**
+ * 時間変換
+ */
+function convertTime(str){
+  const now = new Date();
+  return str
+          .replaceAll('$date', now.toLocaleDateString('sv'))    // YYYY-MM-DD
+          .replaceAll('$time', now.toLocaleTimeString('sv'));   // HH:MM:SS
 }
