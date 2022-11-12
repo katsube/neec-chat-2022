@@ -35,8 +35,8 @@ io.on('connection', (socket) => {
     console.log(data);
 
     // 特定のキーワードを変換
-    let message = convertEmoji(data.message);   // ::str::を絵文字に変換
-    message = convertTime(message);             // $dateを日付に変換
+    let message = convertEmoji(data.message);   // :str:を絵文字に変換
+    message = convertTime(message);             // $date/$timeを日付/時間に変換
     data.message = message;
 
     io.emit("member-post", data);
@@ -103,4 +103,12 @@ function convertTime(str){
   return str
           .replaceAll('$date', now.toLocaleDateString('sv'))    // YYYY-MM-DD
           .replaceAll('$time', now.toLocaleTimeString('sv'));   // HH:MM:SS
+}
+
+/**
+ * NGワードを変換する（課題）
+ */
+function convertNGWord(str){
+  const NG_WORD = '';
+  return str;
 }
