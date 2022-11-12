@@ -4,6 +4,8 @@ const app = express();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
 
+const bot = require('./bot');
+
 //-----------------------------------------------
 // グローバル変数
 //-----------------------------------------------
@@ -23,16 +25,37 @@ app.get("/", (req, res) => {
 io.on('connection', (socket) => {
   console.log('新しいユーザーが接続しました');
 
+  // 入室時の処理
   const token = createToken();
   io.to(socket.id).emit('token', token);      // トークン送信
   io.to(socket.id).emit('chatlog', CHATLOG);  // ログ送信
 
+  // チャットメッセージを受信したときの処理
   socket.on("post", (data) => {
     console.log(data);
+
+    // ::str::を絵文字に変換
+    const message = data.message.replaceAll(':smile:', '😁');
+    data.message = message;
+
     io.emit("member-post", data);
     addChatLog(data);
   });
 });
+
+//--------------------
+// botの自動発言
+//--------------------
+setInterval(() => {
+  // 30%の確率で発動
+  if( (Math.random() % 3) === 0  ){
+    return;
+  }
+  const serif = bot.getRandomMessage();
+  io.emit("member-post", serif);
+  addChatLog(serif);
+}, 1000 * 10);    // 10秒に1回
+
 
 http.listen(3000);
 
