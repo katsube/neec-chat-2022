@@ -37,16 +37,25 @@
     <ul id="message-list">
       <li>メッセージがここに表示されます</li>
     </ul>
+
+    <form id="chat-quit">
+      <button>退室する</button>
+    </form>
   </section>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const IAM = {
+      id: null,
       token: null,
       name: null
     }
+    const ADMIN = {
+      token: 0,
+      name: '管理者'
+    }
     const MEMBERS = [
-      {token:0, name:'管理者'}
+      {token:ADMIN.token, name:ADMIN.name}
     ];
 
     //----------------------------------------
@@ -90,7 +99,8 @@
       }
 
       // 参加者一覧を保存
-      MEMBERS.push({token:IAM.token, name:IAM.name});
+      IAM.id = data.id;
+      MEMBERS.push({token:IAM.id, name:IAM.name});
       for(let i=0; i<data.members.length; i++){
         MEMBERS.push(data.members[i]);
       }
@@ -134,19 +144,52 @@
       console.log("member-join", data);
       MEMBERS.push(data);
       addChatLog({
-        token: 0,
+        token: ADMIN.token,
         message: `${data.name}さんが入室しました`
       });
     });
 
-    function addChatLog(data){
+    // 退室する
+    document.querySelector("#chat-quit").addEventListener("submit", (e)=>{
+      e.preventDefault();
+      socket.emit("quit", {
+        token: IAM.token
+      });
+    });
+
+    // 退室結果
+    socket.on("quit-result", (data)=>{
+      console.log("quit-result", data);
+      if( ! data.status ){
+        alert(`退室できませんでした : ${data.message}`);
+        return;
+      }
+
+      // 退室したら最初の画面に戻る
+      location.href = "/";
+    });
+
+    // 誰かが退室した
+    socket.on("member-quit", (data)=>{
       const user = findMember(data.token);
+      console.log("member-quit", data);
+      addChatLog({
+        token: ADMIN.token,
+        message: `${user.name}さんが退室しました`
+      });
+      removeMember(data.token);
+    });
+
+    function addChatLog(data){
+      console.log("addChatLog", data);
+      const user = findMember(data.token);
+      const name = ('name' in data)?  data.name:user.name;
       const li = document.createElement("li");
       let color = "black";
-      if(data.token === IAM.token){
+      if(data.token === IAM.id){
         color = "red";
       }
-      li.innerHTML = `<span style="color:${color}">${user.name}: ${data.message}</span>`
+      li.innerHTML = `<span style="color:${color}">${name}: ${data.message}</span>`
       document.querySelector("#message-list").appendChild(li);
     }
 
@@ -157,6 +200,16 @@
         }
       }
       return null;
+    }
+
+    function removeMember(token){
+      for(let i=0; i<MEMBERS.length; i++){
+        if( MEMBERS[i].token == token ){
+          MEMBERS.splice(i, 1);
+          return(true);
+        }
+      }
+      return(false);
     }
   </script>
 </body>

@@ -64,6 +64,7 @@ io.on('connection', (socket) => {
     io.to(socket.id)
       .emit('join-result', {
         status:true,
+        id: user.id,
         chatlog: CHATLOG,
         members: createMemberList(data.token)
       });
@@ -92,15 +93,36 @@ io.on('connection', (socket) => {
     message = convertNGWord(message);
     data.message = message;
 
-    // 本人に送信
-    io.to(socket.id).emit('member-post', {token:user.token, message:message});
-
-    // 本人以外に送信
-    socket.broadcast.emit('member-post', {token:user.id, message:message});
+    // 発言を送信
+    io.emit('member-post', {token:user.id, message:message});
 
     // チャットログに追加
-    addChatLog({token:user.id, message:message});
+    addChatLog({name:user.name, message:message});
   });
+
+  //-------------------------
+  // 退室
+  //-------------------------
+  socket.on("quit", (data) => {
+    console.log(data);
+    const user = findMember(data.token);
+
+    // トークンをチェック
+    if( (user.socketid !== socket.id) || (user.token !== data.token) ){
+      io.to(socket.id).emit('quit-result', {status: false, message:'トークンが正しくありません'});
+      return(false);
+    }
+
+    // 退室結果を送信
+    io.to(socket.id).emit('quit-result', {status: true});
+
+    // 本人以外に退室通知
+    socket.broadcast.emit('member-quit', {token:user.id});
+
+    // 参加者一覧から削除
+    removeMember(data.token);
+  });
+
 });
 
 /*
@@ -173,7 +195,7 @@ function createMemberList(token){
   const list = [ ];
 
   for(let i=0; i<MEMBERS.length; i++){
-    if( MEMBERS[i].token !== token ){
+    if( MEMBERS[i].token !== token && MEMBERS[i].name !== null ){
       list.push({
         token: MEMBERS[i].id,
         name: MEMBERS[i].name
@@ -182,4 +204,14 @@ function createMemberList(token){
   }
 
   return(list);
+}
+
+function removeMember(token){
+  for(let i=0; i<MEMBERS.length; i++){
+    if( MEMBERS[i].token == token ){
+      MEMBERS.splice(i, 1);
+      return(true);
+    }
+  }
+  return(false);
 }
