@@ -9,8 +9,18 @@ const bot = require('./bot.js');
 //-----------------------------------------------
 // グローバル変数
 //-----------------------------------------------
+// 過去ログ
 const CHATLOG = [ ];      // チャットログ
 const MAX_CHATLOG = 10;   // チャットログの最大数
+
+// 参加者
+const MEMBERS = [
+  // 以下のようなデータが入る
+  // {id:1, token:'xxx', socketid:'xxx', name:'アルパカ'},
+  // {id:2, token:'yyy', socketid:'yyy', name:'パンダ'},
+];
+let MEMBERS_COUNT = 1;
+
 
 //-----------------------------------------------
 // ルーティング（express）
@@ -27,26 +37,79 @@ io.on('connection', (socket) => {
 
   const token = createToken();
   io.to(socket.id).emit('token', token);
-  io.to(socket.id).emit('chatlog', CHATLOG);
 
+  // 参加者一覧に追加
+  MEMBERS.push(
+    {id:MEMBERS_COUNT, token:token, socketid:socket.id, name:null}
+  );
+  MEMBERS_COUNT++;
+
+  //-------------------------
+  // 入室
+  //-------------------------
+  socket.on('join', (data) => {
+    console.log(data);
+    const user = findMember(data.token);
+
+    // トークンが一致しない場合は何もしない
+    if( (user.socketid !== socket.id) || (user.token !== data.token) ){
+      io.to(socket.id).emit('join-result', {status:false, message:'トークンが正しくありません'});
+      return(false);
+    }
+
+    // 名前を更新
+    user.name = data.name;
+
+    // 入室結果＆必要データを送信
+    io.to(socket.id)
+      .emit('join-result', {
+        status:true,
+        chatlog: CHATLOG,
+        members: createMemberList(data.token)
+      });
+
+    // 他のユーザーに入室通知
+    socket.broadcast.emit('member-join', {token:user.id, name:user.name});
+  });
+
+  //-------------------------
+  // 投稿
+  //-------------------------
   socket.on("post", (data) => {
     console.log(data);
+    const user = findMember(data.token);
+
+    // トークンをチェック（誤っている場合は何もしない）
+    if( (user.socketid !== socket.id) || (user.token !== data.token) ){
+      console.log('トークンが正しくありません');
+      return(false);
+    }
+
+    // メッセージを調整
     let message = data.message;
     message = convertEmoji(message);
     message = convertTime(message);
     message = convertNGWord(message);
     data.message = message;
-    io.emit("member-post", data);
-    addChatLog(data);
+
+    // 本人に送信
+    io.to(socket.id).emit('member-post', {token:user.token, message:message});
+
+    // 本人以外に送信
+    socket.broadcast.emit('member-post', {token:user.id, message:message});
+
+    // チャットログに追加
+    addChatLog({token:user.id, message:message});
   });
 });
 
+/*
 setInterval(() => {
   const data = bot.getRandomMessage();
   data.tokne = 1;
   io.emit("member-post", data);
 }, 5000);
-
+*/
 
 http.listen(3000);
 
@@ -94,4 +157,29 @@ function convertTime(str){
 function convertNGWord(str){
   const ngword = 'ステーキ'; // ???
   return(str);
+}
+
+
+function findMember(token){
+  for(let i=0; i<MEMBERS.length; i++){
+    if( MEMBERS[i].token == token ){
+      return(MEMBERS[i]);
+    }
+  }
+  return(null);
+}
+
+function createMemberList(token){
+  const list = [ ];
+
+  for(let i=0; i<MEMBERS.length; i++){
+    if( MEMBERS[i].token !== token ){
+      list.push({
+        token: MEMBERS[i].id,
+        name: MEMBERS[i].name
+      });
+    }
+  }
+
+  return(list);
 }
