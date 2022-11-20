@@ -184,11 +184,13 @@
       console.log("addChatLog", data);
       const user = findMember(data.token);
       const name = ('name' in data)?  data.name:user.name;
-      const li = document.createElement("li");
+
       let color = "black";
       if(data.token === IAM.id){
         color = "red";
       }
+
+      const li = document.createElement("li");
       li.innerHTML = `<span style="color:${color}">${name}: ${data.message}</span>`
       document.querySelector("#message-list").appendChild(li);
     }
