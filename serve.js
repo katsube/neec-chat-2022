@@ -125,13 +125,11 @@ io.on('connection', (socket) => {
 
 });
 
-/*
 setInterval(() => {
   const data = bot.getRandomMessage();
-  data.tokne = 1;
+  data.id = 1;
   io.emit("member-post", data);
 }, 5000);
-*/
 
 http.listen(3000);
 
