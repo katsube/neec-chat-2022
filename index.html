@@ -37,15 +37,26 @@
     <ul id="message-list">
       <li>メッセージがここに表示されます</li>
     </ul>
+
+    <form id="quit">
+      <button>退室する</button>
+    </form>
   </section>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const IAM = {
+      id: null,
       token: null,
       name: null
     }
+    const MEMBERS = [
+      {token:0, name:'管理者'}
+    ];
 
+    //----------------------------------------
+    // STEP1. サーバに接続
+    //----------------------------------------
     const socket = io();
     socket.on("token", (token)=>{
       IAM.token = token;
@@ -55,31 +66,71 @@
       document.querySelector("#nowconnecting").style.display = "none";
       document.querySelector("#inputname").style.display = "block";
     });
-    socket.on("chatlog", (log)=>{
-      console.log(log);
-      for(let i=0; i<log.length; i++){
-        addChatLog(log[i]);
-      }
-    });
 
+    //----------------------------------------
+    // STEP2. 名前入力＆入室
+    //----------------------------------------
     document.querySelector("#inputname-form").addEventListener("submit", (e)=>{
       e.preventDefault();
       const name = document.querySelector("#name").value;
       IAM.name = name;
 
+      // 入室する
+      socket.emit("join", {
+        token: IAM.token,
+        name: name
+      });
+    });
+
+    socket.on("join-result", (data)=>{
+      console.log("join-result", data);
+      if( ! data.status ){
+        alert(`入室に失敗しました ${data.message}`);
+        return(false);
+      }
+
+      // 公開用トークンを保存
+      IAM.id = data.id;
+
+      // 参加者一覧を保存する
+      for(let i=0; i<data.members.length; i++){
+        MEMBERS.push(data.members[i]);
+      }
+
+      // 過去ログを表示する
+      for(let i=0; i<data.chatlog.length; i++){
+        addChatLog(data.chatlog[i]);
+      }
+
       // 自分自身の名前を表示する
-      document.querySelector("#myname").textContent = name;
+      document.querySelector("#myname").textContent = IAM.name;
 
       // 名前を入力したら、チャット画面を表示する
       document.querySelector("#inputname").style.display = "none";
       document.querySelector("#chatwindow").style.display = "block";
     });
 
+    // 誰かが入室した
+    socket.on("member-join", (data)=>{
+      console.log("member-join", data);
+      MEMBERS.push(data);
+
+      addChatLog({
+        token: 0,
+        message: `${data.name}さんが入室しました`
+      });
+    });
+
+    //----------------------------------------
+    // STEP3. チャット画面
+    //----------------------------------------
+    //----------------------
+    // 発言
+    //----------------------
     document.querySelector("#chat").addEventListener("submit", (e) => {
       e.preventDefault();
       const message = document.querySelector("#message").value;
       const data = {
-        name: IAM.name,
         message: message,
         token: IAM.token
       };
@@ -90,14 +141,69 @@
       addChatLog(data);
     });
 
+    //----------------------
+    // 退室する
+    //----------------------
+    document.querySelector("#quit").addEventListener("submit", (e) => {
+      e.preventDefault();
+      console.log('退室します');
+      const data = {
+        token: IAM.token
+      };
+      socket.emit("quit", data);
+    });
+
+    socket.on("quit-result", (data) => {
+      console.log("quit-result", data);
+      if( ! data.status ){
+        alert(`退室に失敗しました ${data.message}`);
+        return(false);
+      }
+
+      // 現在のページをリロード
+      location.reload();
+    });
+
+    socket.on("member-quit", (data) => {
+      console.log("member-quit", data);
+      const user = findMember(data.token);
+
+      addChatLog({
+        token: 0,
+        message: `${user.name}さんが退室しました`
+      });
+
+      removeMember(data.token);
+    });
+
     function addChatLog(data){
+      const user = findMember(data.token);
       const li = document.createElement("li");
       let color = "black";
-      if(data.token === IAM.token){
+      if(data.token === IAM.id){
         color = "red";
       }
-      li.innerHTML = `<span style="color:${color}">${data.name}: ${data.message}</span>`
+      li.innerHTML = `<span style="color:${color}">${user.name}: ${data.message}</span>`
       document.querySelector("#message-list").appendChild(li);
+    }
+
+    function findMember(token){
+      for(let i=0; i<MEMBERS.length; i++){
+        if(MEMBERS[i].token === token){
+          return(MEMBERS[i]);
+        }
+      }
+      return(null);
+    }
+
+    function removeMember(token){
+      for(let i=0; i<MEMBERS.length; i++){
+        if(MEMBERS[i].token === token){
+          MEMBERS.splice(i, 1);
+          return(true);
+        }
+      }
+      return(false);
     }
   </script>
 </body>
